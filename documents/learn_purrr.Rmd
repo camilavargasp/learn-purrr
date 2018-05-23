@@ -135,6 +135,8 @@ class(mtcars_means)
 
 `map` by default returns a list. One nice feature of `map` and `purrr` is that we can specify the kind of output we want. 
 
+*type --> defines what kind of outout I will get
+
   - `map_TYPE` returns an object of class TYPE, e.g.
 
     - `map_lgl` returns logical objects
@@ -147,6 +149,10 @@ Specifying type makes it easier to wrangle different types of outputs suppose th
 ```{r}
 map_df(mtcars, mean, na.rm = T)
 ```
+
+map2 = allowa you to build a list of thing with different objects.
+Outcome: 
+[1] "one fish"  "two fish"  "red fish"  "blue fish"
 
 `map` can also be extended to deal with multiple input lists
 
@@ -163,9 +169,15 @@ map2_chr(c('one','two','red','blue'), c('fish'), paste)
 ```
 
 In this case, we are mapping `paste` over each combination of these two lists. 
+[1] "one fish"  "two fish"  "red fish"  "blue fish"
+
+You can also do this with three elements!!
+
+How does this is different thanmutate?
 
 
 #### Programming with Functions
+*having functions as the core of your programming
 
 Notice here that `purrr` guessed what I was trying to do here (paste the two elements together). That works for very simply functions, but a lot of the time that won't work and you have to be more specific in specifying the function we are going to use and how the data we are passing to it are used. In those cases, we'll want to specify our own functions for use in `purrr`. 
 
@@ -176,7 +188,7 @@ As a very quick reintroduction to functions:
 Functions in R take any number of named inputs, do operations on them, and returns the last thing produced inside the function (or whatever you specify using `return`)
 
 ```{r}
-
+#waht happens inside a function stays inside the function (eg:variables created inside the fucntion stay inside the function adn are not part of the environment). Be careful with ehat you put inthe function!! ONLY THINGS YOU ARE GOING TO EXTRACT/PRINT
 z <- 10
 
 foo <- function(x,y) {
@@ -384,7 +396,7 @@ Enter `purrr`
 ```{r}
 
 got_chars[1:5] %>%
-  map_chr('name')
+  map_chr('name') #goes through the character list form 1 to f and prints out the name
 
 ```
 
@@ -403,7 +415,7 @@ Huh, why didn't that work? Passing a string to map actually tells `purrr` to div
 
 ```{r}
 got_chars[1:5] %>%
-  map(`[`, c('name', 'allegiances'))
+  map(`[`, c('name', 'allegiances')) #`[` is using brakets as a function. This is saying print names and allegiances
 
 ```
 
@@ -439,14 +451,19 @@ Now, let's say that I want to get all the Lanisters, so I can see which people t
 This is where a lot of the power of `purrr` starts to come in, allowing you to easily apply functions across nested layers of a list
 
 
+*Give me the Lannister names
 ```{r}
 got_chars %>%
   set_names(map_chr(.,'name')) %>%
   map(`[`,c('name','allegiances')) %>%
-  purrr::keep(~stringr::str_detect(.$name, 'Lannister')) %>%
+  purrr::keep(~stringr::str_detect(.$name, 'Lannister')) %>% #keep is the purrr version of filter
   listviewer::jsonedit()
 ```
 
+*inside map or map2 you can use .x indicate what goes first.
+.y indicates what goes second
+
+*When you have multiple list to commine you use pmap and to give an order you have to right out the elements.
 
 Now, suppose that we want anyone who's allied with the Starks
 
@@ -504,6 +521,7 @@ got_chars %>%
 
 You can also use `map` together with your own custom functions. Suppose we wanted to figure out how many aliases and alliances each character has, as well as where they were born. We can use `pmap` to apply a function over each of these attributes
 
+. when using the pipe, mena the thing that was pased though the pipe.
 
 ```{r}
 
@@ -528,6 +546,8 @@ got_foo <- function(name, aliases, allegiances,born){
 
 }
 
+pmap_chr(got_list, got_foo)
+
 got_list %>%
   pmap_chr(got_foo) %>%
   head()
@@ -543,14 +563,20 @@ Things obviously get a lot more complicated than this, but hopefully that gives 
 got_chars %>%
   set_names(map_chr(.,'name'))  %>%
   map(`[`,c('name','allegiances')) %>%
-  listviewer::jsonedit()
+  listviewer::jsonedit() #listviewer is a way to simple sii your list!
 
 ```
+
+##D
+
+`safely()` purr function = for every element the map is retuning it gives me where is the error. You can extract information on why several numbers are not working.
+See where the problem is
+
+browser() to check inside the function what is going wrong
 
 
 
 ## Analysis with `purrr` and `modelr`
-
 
 So far, `purrr` has basically helped us apply functions across and poke around in lists. That's nice, but its real power comes in helping with analysis. Let's look at the `gapminder` data set
 
@@ -595,6 +621,7 @@ stargazer::stargazer(life_mod, type = 'html')
 So now we have a *very* simple model, but how do we know if this is the model we want to use? Let's use AIC to compare a few different model structures (note, this is not an endorsement for AIC mining!)
 
 
+*four different models I want to try
 ```{r}
 
 models <- list(
@@ -611,6 +638,7 @@ woah = 'lifeexp ~ pop + gdppercap + year*country'
 
 ```
 
+*Using purr and tbl
 
 Now, since this is a simple three model example, we could just use a loop, or even copy and paste a few times. But, let's see how we can use `purrr` to help us do some diagnostics on these models.
 
@@ -625,13 +653,13 @@ model_frame <- data_frame(model = models) %>%
 ```
 
 
-Now, let's use purrr to convert each of these character strings into a model
+Now, let's use purrr to convert each of these character strings into a model (formula)
 
 
 ```{r}
 
 model_frame <- model_frame %>% 
-    mutate(model = map(model, as.formula))
+    mutate(model = map(model, as.formula)) #maping over model and maping for each formula
 
 model_frame
 ```
@@ -640,7 +668,7 @@ model_frame
 ```{r, eval = F}
 
 model_frame <- model_frame %>%
-  mutate(fit = lm(model, data = gapminder))
+  mutate(fit = lm(model, data = gapminder)) #it does not woek because lm does not no how to deal with multiple models
 
 ```
 
@@ -658,6 +686,7 @@ model_frame
 
 We're now going to start integrating some methods from the `modelr` package to diagnose our regression
 
+*Stores everything right there! 
 
 ```{r}
 model_frame <- model_frame %>%
@@ -666,6 +695,8 @@ aic = map_dbl(fit, ~AIC(.))) %>%
   arrange(aic)
 
 model_frame
+
+#you can directly plot form this outome!
 
 ```
 
@@ -677,14 +708,14 @@ We'll start by using the `modelr` package to create a bunch of training-test com
 
 
 ```{r}
-
+#testing the predicting power of each of the model without relying in the AIC
 
 validate <- gapminder %>%
- rsample::vfold_cv(10)
+ rsample::vfold_cv(10) #split data to 10 training set data. 
 
 test_data <- list(test_training = list(validate), model_name = model_frame$model_name)  
   
-test_data <- cross_df(test_data) %>%
+test_data <- cross_df(test_data) %>% #gives you the factoria combination of your variables
   unnest(.id = "model_number") %>% 
   left_join(model_frame %>% select(model_name, model, fit), by = "model_name")
 
